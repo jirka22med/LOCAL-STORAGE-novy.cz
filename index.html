@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalStorage Explorer</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --danger-color: #f44336;
+            --edit-color: #2196F3;
+            --secondary-color: #777;
+            --light-bg: #f5f5f5;
+            --border-radius: 8px;
+            --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--light-bg);
+            transition: background-color 0.3s;
+        }
+        
+        h1, h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .container:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.delete {
+            background-color: var(--danger-color);
+        }
+        
+        button.edit {
+            background-color: var(--edit-color);
+        }
+        
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        
+        button.fullscreen {
+            background-color: #9c27b0;
+        }
+        
+        button.export {
+            background-color: #ff9800;
+        }
+        
+        button.import {
+            background-color: #3f51b5;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input[type="text"], input[type="file"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            transition: border 0.3s;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus, textarea:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .controls-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .value-cell {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .size-cell {
+            width: 100px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        
+        .search-container {
+            margin-bottom: 15px;
+        }
+        
+        .datetime-container {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background-color: #333;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Tmavý režim */
+        body.dark-mode {
+            background-color: #222;
+            color: #eee;
+        }
+        
+        body.dark-mode h1, 
+        body.dark-mode h2 {
+            color: #fff;
+        }
+        
+        body.dark-mode .container {
+            background-color: #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        body.dark-mode th {
+            background-color: #444;
+            color: #eee;
+        }
+        
+        body.dark-mode tr:hover {
+            background-color: #3a3a3a;
+        }
+        
+        body.dark-mode td {
+            border-bottom: 1px solid #444;
+        }
+        
+        body.dark-mode input[type="text"],
+        body.dark-mode textarea,
+        body.dark-mode select {
+            background-color: #444;
+            color: #eee;
+            border-color: #555;
+        }
+        
+        body.dark-mode .modal-content {
+            background-color: #333;
+            color: #eee;
+        }
+        
+        .totals {
+            text-align: right;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .fullscreen-container {
+            background-color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            padding: 20px;
+            overflow: auto;
+            display: none;
+        }
+        
+        body.dark-mode .fullscreen-container {
+            background-color: #222;
+        }
+        
+        .fullscreen-content {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .fullscreen-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2001;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 3000;
+        }
+        
+        .notification.show {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            h2 {
+                font-size: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .controls h2 {
+                margin-bottom: 10px;
+            }
+            
+            .controls-buttons {
+                justify-content: space-between;
+            }
+            
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            
+            tr {
+                border: 1px solid #ccc;
+                margin-bottom: 10px;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            
+            td {
+                border: none;
+                border-bottom: 1px solid #eee;
+                position: relative;
+                padding-left: 50%;
+                text-align: left;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+            }
+            
+            td:before {
+                position: absolute;
+                left: 10px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: bold;
+            }
+            
+            td:nth-of-type(1):before { content: "Klíč:"; }
+            td:nth-of-type(2):before { content: "Hodnota:"; }
+            td:nth-of-type(3):before { content: "Velikost:"; }
+            td:nth-of-type(4):before { content: "Akce:"; }
+            
+            .value-cell {
+                max-width: 100%;
+                padding-left: 80px;
+                word-break: break-all;
+                white-space: normal;
+            }
+            
+            .size-cell {
+                width: 100%;
+            }
+            
+            .actions {
+                justify-content: flex-start;
+            }
+            
+            .modal-content {
+                width: 90%;
+                margin: 50px auto;
+            }
+            
+            .buttons button {
+                flex: 1;
+                min-width: 80px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            button {
+                padding: 8px;
+                font-size: 13px;
+            }
+            
+            td {
+                padding-left: 40%;
+            }
+            
+            td:before {
+                width: 35%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" onclick="toggleTheme()" title="Přepnout tmavý/světlý režim">
+        🌓
+        
+    </div>
+    <button id="fullscreen-toggle">⛶</button>
+    <h1>LocalStorage Explorer</h1>
+    
+    <div class="container">
+        <div class="datetime-container" id="datetime"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Přidat novou položku</h2>
+        <div class="form-group">
+            <label for="newKey">Klíč:</label>
+            <input type="text" id="newKey" placeholder="Zadejte klíč">
+        </div>
+        <div class="form-group">
+            <label for="newValue">Hodnota:</label>
+            <textarea id="newValue" placeholder="Zadejte hodnotu"></textarea>
+        </div>
+        <div class="buttons">
+            <button onclick="addItem()">Přidat položku</button>
+            <button class="secondary" onclick="generateRandomData()">Generovat testovací data</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h2>Obsah LocalStorage</h2>
+            <div class="controls-buttons">
+                <button onclick="toggleFullscreen()" class="fullscreen" title="Celá obrazovka">Celá obrazovka</button>
+                <button onclick="exportData()" class="export" title="Exportovat data">Export</button>
+                <button onclick="showImportModal()" class="import" title="Importovat data">Import</button>
+                <button onclick="clearAll()" class="delete" title="Vymazat vše">Vymazat vše</button>
+            </div>
+        </div>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Hledat v klíčích a hodnotách..." onkeyup="filterTable()">
+        </div>
+        
+        <div id="tableContainer">
+            <table id="localStorageTable">
+                <thead>
+                    <tr>
+                        <th>Klíč</th>
+                        <th>Hodnota</th>
+                        <th class="size-cell">Velikost</th>
+                        <th>Akce</th>
+                    </tr>
+                </thead>
+                <tbody id="localStorageData">
+                    <!-- Data budou doplněna pomocí JavaScriptu -->
+                </tbody>
+            </table>
+            <div class="totals" id="storageTotals"></div>
+        </div>
+    </div>
+
+    <!-- Modal pro editaci -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>Upravit položku</h2>
+            <div class="form-group">
+                <label for="editKey">Klíč:</label>
+                <input type="text" id="editKey" readonly>
+            </div>
+            <div class="form-group">
+                <label for="editValue">Hodnota:</label>
+                <textarea id="editValue"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="valueFormat">Formát hodnoty:</label>
+                <select id="valueFormat" onchange="formatValue()">
+                    <option value="raw">Původní</option>
+                    <option value="json">JSON (formátovaný)</option>
+                    <option value="text">Text</option>
+                </select>
+            </div>
+            <div class="buttons">
+                <button onclick="saveEdit()">Uložit</button>
+                <button onclick="closeModal()" class="secondary">Zrušit</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal pro import -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <h2>Importovat data</h2>
+            <div class="form-group">
+                <label for="importFile">Vyberte soubor JSON:</label>
+                <input type="file" id="importFile" accept=".json">
+            </div>
+            <div class="form-group">
+                <label>Možnosti importu:</label>
+                <div>
+                    <input type="radio" id="importReplace" name="importOption" value="replace" checked>
+                    <label for="importReplace">Nahradit všechna data</label>
+                </div>
+                <div>
+                    <input type="radio" id="importMerge" name="importOption" value="merge">
+                    <label for="importMerge">Sloučit s existujícími daty</label>
+                </div>
+            </div>
+            <div class="buttons">
+                <button onclick="importData()">Importovat</button>
+                <button onclick="closeImportModal()" class="secondary">Zrušit</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal pro detail položky -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <h2>Detail položky</h2>
+            <div class="form-group">
+                <label for="viewKey">Klíč:</label>
+                <input type="text" id="viewKey" readonly>
+            </div>
+            <div class="form-group">
+                <label for="viewValue">Hodnota:</label>
+                <textarea id="viewValue" readonly style="min-height: 200px;"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="viewFormat">Formát hodnoty:</label>
+                <select id="viewFormat" onchange="formatViewValue()">
+                    <option value="raw">Původní</option>
+                    <option value="json">JSON (formátovaný)</option>
+                    <option value="text">Text</option>
+                </select>
+            </div>
+            <div class="buttons">
+                <button onclick="closeViewModal()" class="secondary">Zavřít</button>
+                <button onclick="editFromView()" class="edit">Upravit</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fullscreen container -->
+    <div id="fullscreenContainer" class="fullscreen-container">
+        <div class="fullscreen-content">
+            <h2>LocalStorage Explorer (Celá obrazovka)</h2>
+            
+            <div class="search-container">
+                <input type="text" id="fsSearchInput" placeholder="Hledat v klíčích a hodnotách..." onkeyup="filterFullscreenTable()">
+            </div>
+            
+            <div id="fsTableContainer">
+                <table id="fsLocalStorageTable">
+                    <thead>
+                        <tr>
+                            <th>Klíč</th>
+                            <th>Hodnota</th>
+                            <th class="size-cell">Velikost</th>
+                            <th>Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fsLocalStorageData">
+                        <!-- Data budou doplněna pomocí JavaScriptu -->
+                    </tbody>
+                </table>
+                <div class="totals" id="fsStorageTotals"></div>
+            </div>
+            
+            <div class="fullscreen-controls">
+                <button onclick="toggleFullscreen()" class="fullscreen">Ukončit celou obrazovku</button>
+                
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notifikace -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Proměnná pro uchování aktuálně editovaného klíče
+        let currentEditKey = '';
+        let currentViewKey = '';
+        let originalEditValue = '';
+        let originalViewValue = '';
+        
+        // Přepínání tmavého režimu
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+            
+            // Uložíme preferenci do localStorage
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+        }
+        
+        // Načtení preferovaného tématu
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        }
+        
+        // Zobrazení notifikace
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.backgroundColor = type === 'success' ? '#4CAF50' : '#f44336';
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Funkce pro detekci JSON formátu
+        function isJsonString(str) {
+            try {
+                JSON.parse(str);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        // Formátování hodnoty v editačním modalu
+        function formatValue() {
+            const value = originalEditValue;
+            const format = document.getElementById('valueFormat').value;
+            const editValueElement = document.getElementById('editValue');
+            
+            if (format === 'json' && isJsonString(value)) {
+                try {
+                    const formattedJson = JSON.stringify(JSON.parse(value), null, 2);
+                    editValueElement.value = formattedJson;
+                } catch (e) {
+                    editValueElement.value = value;
+                }
+            } else if (format === 'text') {
+                try {
+                    // Pokusíme se dekódovat URL, pokud je to možné
+                    editValueElement.value = decodeURIComponent(value);
+                } catch (e) {
+                    editValueElement.value = value;
+                }
+            } else {
+                editValueElement.value = value;
+            }
+        }
+        
+        // Formátování hodnoty v zobrazovacím modalu
+        function formatViewValue() {
+            const value = originalViewValue;
+            const format = document.getElementById('viewFormat').value;
+            const viewValueElement = document.getElementById('viewValue');
+            
+            if (format === 'json' && isJsonString(value)) {
+                try {
+                    const formattedJson = JSON.stringify(JSON.parse(value), null, 2);
+                    viewValueElement.value = formattedJson;
+                } catch (e) {
+                    viewValueElement.value = value;
+                }
+            } else if (format === 'text') {
+                try {
+                    viewValueElement.value = decodeURIComponent(value);
+                } catch (e) {
+                    viewValueElement.value = value;
+                }
+            } else {
+                viewValueElement.value = value;
+            }
+        }
+        
+        // Přepnutí do celoobrazovkového režimu
+        function toggleFullscreen() {
+            const container = document.getElementById('fullscreenContainer');
+            if (container.style.display === 'block') {
+                container.style.display = 'none';
+            } else {
+                container.style.display = 'block';
+                loadFullscreenData();
+            }
+        }
+        
+        // Načtení dat do celoobrazovkového režimu
+        function loadFullscreenData() {
+            const tbody = document.getElementById('fsLocalStorageData');
+            tbody.innerHTML = '';
+            
+            if (localStorage.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="4" class="no-data">Žádná data v localStorage</td>
+                `;
+                tbody.appendChild(row);
+                return;
+            }
+            
+            let totalSize = 0;
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                const size = new Blob([value]).size;
+                totalSize += size;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHTML(key)}</td>
+                    <td class="value-cell" title="${escapeHTML(value)}" onclick="viewItem('${escapeHTML(key)}')">${escapeHTML(value)}</td>
+                    <td class="size-cell">${formatSize(size)}</td>
+                    <td class="actions">
+                        <button class="edit" onclick="editItem('${escapeHTML(key)}')">Upravit</button>
+                        <button class="delete" onclick="deleteItem('${escapeHTML(key)}')">Smazat</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+            
+            // Aktualizace souhrnných informací
+            document.getElementById('fsStorageTotals').innerHTML = `
+                Celkem položek: ${localStorage.length} | 
+                Celková velikost: ${formatSize(totalSize)} |
+                Využito: ${Math.round((totalSize / (5 * 1024 * 1024)) * 100)}% z 5MB
+            `;
+        }
+        
+        // Vyhledávání v celoobrazovkovém režimu
+        function filterFullscreenTable() {
+            const input = document.getElementById('fsSearchInput');
+            const filter = input.value.toLowerCase();
+            const rows = document.getElementById('fsLocalStorageData').getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const keyCell = rows[i].getElementsByTagName('td')[0];
+                const valueCell = rows[i].getElementsByTagName('td')[1];
+                
+                if (keyCell && valueCell) {
+                    const keyText = keyCell.textContent || keyCell.innerText;
+                    const valueText = valueCell.textContent || valueCell.innerText;
+                    
+                    if (keyText.toLowerCase().indexOf(filter) > -1 || valueText.toLowerCase().indexOf(filter) > -1) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            }
+        }
+        
+        // Funkce pro filtrování tabulky
+        function filterTable() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const rows = document.getElementById('localStorageData').getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                if (rows[i].getElementsByTagName('td').length < 2) continue;
+                
+                const keyCell = rows[i].getElementsByTagName('td')[0];
+                const valueCell = rows[i].getElementsByTagName('td')[1];
+                
+                if (keyCell && valueCell) {
+                    const keyText = keyCell.textContent || keyCell.innerText;
+                    const valueText = valueCell.textContent || valueCell.innerText;
+                    
+                    if (keyText.toLowerCase().indexOf(filter) > -1 || valueText.toLowerCase().indexOf(filter) > -1) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            }
+        }
+        
+        // Export dat do JSON souboru
+        function exportData() {
+            const data = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                data[key] = localStorage.getItem(key);
+            }
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'localStorage_' + new Date().toISOString().slice(0, 10) + '.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('Data byla úspěšně exportována');
+        }
+        
+        // Otevření importovacího modalu
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'block';
+        }
+        
+        // Zavření importovacího modalu
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+        
+        // Import dat z JSON souboru
+        function importData() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showNotification('Prosím vyberte soubor k importu', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    const importOption = document.querySelector('input[name="importOption"]:checked').value;
+                    
+                    if (importOption === 'replace') {
+                        localStorage.clear();
+                    }
+                    
+                    let count = 0;
+                    for (const key in data) {
+                        localStorage.setItem(key, data[key]);
+                        count++;
+                    }
+                    
+                    showNotification(`Úspěšně importováno ${count} položek`);
+                    closeImportModal();
+                    loadLocalStorageData();
+                } catch (error) {
+                    showNotification('Chyba při importu dat: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Funkce pro načtení dat z localStorage
+function loadLocalStorageData() {
+    const tbody = document.getElementById('localStorageData');
+    tbody.innerHTML = '';
+    
+    if (localStorage.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="4" class="no-data">Žádná data v localStorage</td>
+        `;
+        tbody.appendChild(row);
+        updateStorageTotals(0);
+        return;
+    }
+    
+    let totalSize = 0;
+    
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        const size = new Blob([value]).size;
+        totalSize += size;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${escapeHTML(key)}</td>
+            <td class="value-cell" title="${escapeHTML(value)}" onclick="viewItem('${escapeHTML(key)}')">${escapeHTML(value)}</td>
+            <td class="size-cell">${formatSize(size)}</td>
+            <td class="actions">
+                <button class="edit" onclick="editItem('${escapeHTML(key)}')">Upravit</button>
+                <button class="delete" onclick="deleteItem('${escapeHTML(key)}')">Smazat</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+    
+    updateStorageTotals(totalSize);
+}
+
+// Funkce pro aktualizaci souhrnných informací
+function updateStorageTotals(totalSize) {
+    document.getElementById('storageTotals').innerHTML = `
+        Celkem položek: ${localStorage.length} | 
+        Celková velikost: ${formatSize(totalSize)} |
+        Využito: ${Math.round((totalSize / (5 * 1024 * 1024)) * 100)}% z 5MB
+    `;
+}
+
+// Formátování velikosti
+function formatSize(bytes) {
+    if (bytes < 1024) {
+        return bytes + ' B';
+    } else if (bytes < 1024 * 1024) {
+        return (bytes / 1024).toFixed(2) + ' KB';
+    } else {
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+}
+
+// Escape HTML znaků
+function escapeHTML(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Přidání nové položky
+function addItem() {
+    const key = document.getElementById('newKey').value.trim();
+    const value = document.getElementById('newValue').value;
+    
+    if (!key) {
+        showNotification('Klíč nemůže být prázdný', 'error');
+        return;
+    }
+    
+    try {
+        localStorage.setItem(key, value);
+        document.getElementById('newKey').value = '';
+        document.getElementById('newValue').value = '';
+        loadLocalStorageData();
+        showNotification('Položka byla úspěšně přidána');
+    } catch (e) {
+        showNotification('Chyba při ukládání: ' + e.message, 'error');
+    }
+}
+
+// Úprava položky
+function editItem(key) {
+    currentEditKey = key;
+    const value = localStorage.getItem(key);
+    originalEditValue = value;
+    
+    document.getElementById('editKey').value = key;
+    document.getElementById('editValue').value = value;
+    document.getElementById('valueFormat').value = 'raw';
+    
+    document.getElementById('editModal').style.display = 'block';
+}
+
+// Zobrazení detailu položky
+function viewItem(key) {
+    currentViewKey = key;
+    const value = localStorage.getItem(key);
+    originalViewValue = value;
+    
+    document.getElementById('viewKey').value = key;
+    document.getElementById('viewValue').value = value;
+    document.getElementById('viewFormat').value = 'raw';
+    
+    document.getElementById('viewModal').style.display = 'block';
+}
+
+// Přechod z detailu do úpravy
+function editFromView() {
+    closeViewModal();
+    editItem(currentViewKey);
+}
+
+// Uložení změn
+function saveEdit() {
+    try {
+        localStorage.setItem(currentEditKey, document.getElementById('editValue').value);
+        closeModal();
+        loadLocalStorageData();
+        showNotification('Položka byla úspěšně upravena');
+    } catch (e) {
+        showNotification('Chyba při ukládání: ' + e.message, 'error');
+    }
+}
+
+// Zavření modalu
+function closeModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Zavření view modalu
+function closeViewModal() {
+    document.getElementById('viewModal').style.display = 'none';
+}
+
+// Smazání položky
+function deleteItem(key) {
+    if (confirm(`Opravdu chcete smazat položku "${key}"?`)) {
+        localStorage.removeItem(key);
+        loadLocalStorageData();
+        showNotification('Položka byla úspěšně smazána');
+    }
+}
+
+// Vymazání všech dat
+function clearAll() {
+    if (confirm('Opravdu chcete vymazat VŠECHNA data z localStorage?')) {
+        localStorage.clear();
+        loadLocalStorageData();
+        showNotification('Všechna data byla úspěšně smazána');
+    }
+}
+
+// Generování náhodných testovacích dat
+function generateRandomData() {
+    const dataTypes = [
+        { type: 'string', generate: () => Math.random().toString(36).substring(2, 15) },
+        { type: 'number', generate: () => Math.random() * 1000 },
+        { type: 'boolean', generate: () => Math.random() > 0.5 },
+        { type: 'array', generate: () => JSON.stringify(Array.from({length: 5}, () => Math.floor(Math.random() * 100))) },
+        { type: 'object', generate: () => JSON.stringify({
+            id: Math.floor(Math.random() * 1000),
+            name: Math.random().toString(36).substring(2, 10),
+            active: Math.random() > 0.5
+        })}
+    ];
+    
+    for (let i = 0; i < 10; i++) {
+        const dataType = dataTypes[Math.floor(Math.random() * dataTypes.length)];
+        const key = 'test_' + dataType.type + '_' + new Date().getTime() + '_' + i;
+        const value = dataType.generate();
+        
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            showNotification('Chyba při generování dat: localStorage je plný', 'error');
+            break;
+        }
+    }
+    
+    loadLocalStorageData();
+    showNotification('Testovací data byla vygenerována');
+}
+
+// Aktualizace data a času
+function updateDateTime() {
+    const now = new Date();
+    const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit'
+    };
+    document.getElementById('datetime').textContent = now.toLocaleDateString('cs-CZ', options);
+}
+
+// Inicializace při načtení stránky
+document.addEventListener('DOMContentLoaded', function() {
+    loadTheme();
+    loadLocalStorageData();
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+});
+ // Fullscreen funkce
+console.log("Inicializace tlačítka pro fullscreen.");
+const fullscreenToggle = document.getElementById("fullscreen-toggle");
+
+// Funkce pro aktualizaci stylu tlačítka podle fullscreen stavu
+function updateFullscreenButton() {
+  if (document.fullscreenElement) {
+    fullscreenToggle.classList.add("active");
+    fullscreenToggle.textContent = "⛶ ";
+    console.log("Přecházím na celou obrazovku.");
+  } else {
+    fullscreenToggle.classList.remove("active");
+    fullscreenToggle.textContent = "⛶ ";
+    console.log("Odcházím z celé obrazovky.");
+  }
+}
+
+// Event listener na tlačítko fullscreen
+fullscreenToggle.addEventListener("click", () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.error("Fullscreen request failed: ", err);
+    });
+  }
+});
+
+// Event listener pro detekci změny fullscreen režimu
+document.addEventListener("fullscreenchange", updateFullscreenButton);
+
+</script>
+</body>
+</html>
